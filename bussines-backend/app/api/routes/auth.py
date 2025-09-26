@@ -11,8 +11,8 @@ from app.core.config import settings
 router = APIRouter()
 security = HTTPBearer()
 
-@router.post("/register",response_model=Token)
-def register(user_data:UserCreate):
+@router.post("/register", response_model=Token)
+async def register(user_data: UserCreate):
     """
     Registrar nuevo usuario
     
@@ -21,57 +21,95 @@ def register(user_data:UserCreate):
     - **password**: Contraseña mínimo 6 caracteres
     """
 
-    #Intenta crear usuario
-    user = user_service.create_user(user_data)
+    try:
+        print(f"Registrando usuario: {user_data.email}")
 
-    if not user:
-        raise HTTPException(
-            status_code = status.HTTP_400_BAD_REQUEST,
-            detail = "EL email ya esta registrado"
+        #Create user
+        user = user_service.create_user(user_data)
+
+        if not user:
+            raise HTTPException(
+                status_code = status.HTTP_400_BAD_REQUEST,
+                detail = "El email ya esta registrado o hay un error al crearlo"
+            )
+
+        #Create token
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub":user.email},expires_delta=access_token_expires
         )
-    
-     # Crear token
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.email}, 
-        expires_delta=access_token_expires
-    )
-    
-    return Token(
-        access_token=access_token,
-        token_type="bearer",
-        user=user
-    )
 
-@router.post("/login",response_model=Token)
-def login(user_data: UserLogin):
+        print(f"Usuario registrado exitosamente: {user.email}")
+        return {
+            "access_token": access_token,  # ✅ Con doble 'S'
+            "token_type": "bearer",
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "business_type": user.business_type,
+                "stage": user.stage,
+                "created_at": user.created_at
+            }
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error en registro: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno del servidor"
+        )
+
+@router.post("/login", response_model=Token)
+async def login(credentials: UserLogin):
     """
     Iniciar sesión
     
     - **email**: Email del usuario
     - **password**: Contraseña
     """
-     # Autenticar usuario
-    user = user_service.authenticate_user(user_data.email, user_data.password)
-    
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email o contraseña incorrectos"
+    try:
+        print(f"API: Login attempt for {credentials.email}")
+
+        #Autenticate user
+        user = user_service.authenticate_user(credentials)
+
+        if not user:
+            raise HTTPException(
+                status_code = status.HTTP_401_UNAUTHORIZED,
+                detail = "Email o contraseña incorrectos"
+            )
+        
+        #Create token
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.email}, expires_delta=access_token_expires
         )
-    
-    # Crear token
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.email}, 
-        expires_delta=access_token_expires
-    )
-    
-    return Token(
-        access_token=access_token,
-        token_type="bearer",
-        user=user
-    )
+
+        print(f"✅ Login exitoso para: {user.email}")
+        return {
+            "access_token": access_token,  # ✅ Con doble 'S'
+            "token_type": "bearer",
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "business_type": user.business_type,
+                "stage": user.stage,
+                "created_at": user.created_at
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error en login: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno del servidor"
+        )
 
 @router.get("/me", response_model=UserResponse)
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -96,14 +134,6 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         )
     
     return user
-
-@router.get("/users", response_model=list[UserResponse])
-def get_all_users():
-    """
-    Obtener todos los usuarios (para testing)
-    ⚠️ En producción esto requeriría permisos de admin
-    """
-    return user_service.get_all_users()
 
 # 🎯 ENDPOINTS ADICIONALES (BONUS)
 

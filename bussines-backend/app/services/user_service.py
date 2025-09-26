@@ -1,135 +1,152 @@
 from typing import Optional, Dict, List
 from datetime import datetime
-from app.schemas.user import UserCreate, UserResponse, UserUpdate
+from app.schemas.user import UserCreate, UserResponse, UserUpdate,UserLogin
 from app.core.security import get_password_hash, verify_password
+from app.core.database import supabase_db
 
-class UserService:
-    """Servicio para manejar usuarios en memoria"""
-    
+class UserService:    
     def __init__(self):
-        # "Base de datos" en memoria
-        self._users: Dict[str, dict] = {}
-        self._user_counter = 1
-        
-        # Usuario de prueba
-        self.create_user(UserCreate(
-            name="Usuario Test",
-            email="test@example.com",
-            password="123456"
-        ))
-    
+        self.db = supabase_db.get_client()
+
     def create_user(self, user_data: UserCreate) -> Optional[UserResponse]:
-        """Crear nuevo usuario"""
-        # Verificar si ya existe
-        if user_data.email in self._users:
-            return None
-        
-        # Crear usuario
-        user_id = f"user_{self._user_counter}"
-        self._user_counter += 1
-        
-        new_user = {
+        """"Crear Nuevo Usuario"""
+        try: 
+            print(f"Creando usuario: {user_data.email}")
+
+            #Verify if exists
+            existing = self.db.table('users').select('email').eq('email',user_data.email).execute()
+            if existing.data:
+                print(f"Usuario ya existe: {user_data.email}")
+                return None
+            
+            #Creat a new user
+            new_user={
+                "email":user_data.email,
+                "password_hash":get_password_hash(user_data.password)
+            }
+
+            user_result = self.db.table('users').insert(new_user).execute()
+            print(f"Usuario creado en tabla users: {user_result.data}")
+
+            if not user_result.data:
+                print(f"Error: no se puede crear el usuario")
+                return None
+            
+            user_id = user_result.data[0]["id"]
+
+            #Crear perfil en tabla profiles
+            profile_data = {
             "id": user_id,
-            "name": user_data.name,
-            "email": user_data.email,
-            "hashed_password": get_password_hash(user_data.password),
-            "created_at": datetime.utcnow().isoformat()
+            "full_name": user_data.full_name,
+            "stage": user_data.stage,
+            # Guardar business_type en objectives como JSON
+            "objectives": {
+                "business_type": user_data.business_type
+            }
         }
-        
-        self._users[user_data.email] = new_user
-        
-        return UserResponse(
-            id=new_user["id"],
-            name=new_user["name"],
-            email=new_user["email"],
-            created_at=new_user["created_at"]
-        )
+
+            profile_result = self.db.table('profiles').insert(profile_data).execute()
+            print(f"Perfil creado {profile_result.data}")
+
+            if profile_result.data:
+                profile = profile_result.data[0]
+                return UserResponse(
+                    id=str(user_id),
+                    email=user_data.email,
+                    full_name=profile["full_name"],
+                    business_type=profile.get("objectives", {}).get("business_type", "producto"),
+                    stage=profile["stage"],
+                    created_at=profile['created_at']
+            )
+            return None
     
-    def authenticate_user(self, email: str, password: str) -> Optional[UserResponse]:
+        except Exception as e:
+                print(f"❌ Error creando usuario: {e}")
+                import traceback
+                print(f"📊 Traceback: {traceback.format_exc()}")
+                return None
+
+
+    
+    def authenticate_user(self, login_data:UserLogin) -> Optional[UserResponse]:
         """Autenticar usuario"""
-        user = self._users.get(email)
-        if not user:
-            return None
-        
-        if not verify_password(password, user["hashed_password"]):
-            return None
-        
-        return UserResponse(
-            id=user["id"],
-            name=user["name"],
+        try:
+            print(f"Autenticando usuario: {login_data.email}")
+
+            #Obtain user
+            user_result = self.db.table('users').select('*').eq('email',login_data.email).execute()
+            print(f"Resultado no encontrado: {len(user_result.data) if user_result.data else 0} registros encontrados")
+
+            if not user_result.data: 
+                print(f"Usuario no encontrado: {login_data.email}")
+                return None
+            
+            user = user_result.data[0]
+
+            #Verify password
+            password_valid = verify_password(login_data.password,user["password_hash"])
+            print(f"🔐 Verificación de contraseña: {'✅ Válida' if password_valid else '❌ Inválida'}")
+            if not password_valid:
+                print("Contrasena incorrecta")
+                return None
+
+            #Obtain profile
+            profile_result = self.db.table('profiles').select('*').eq('id',user["id"]).execute()
+            print(f"📋 Resultado búsqueda perfil: {len(profile_result.data) if profile_result.data else 0} registros encontrados")
+
+            if not profile_result.data:
+                print("Perfil no encontrado")
+                return None
+            
+            profile = profile_result.data[0]
+            print(f"✅ Usuario autenticado exitosamente: {user['email']}")
+
+            return UserResponse(
+            id=str(user["id"]),
             email=user["email"],
-            created_at=user["created_at"]
+            full_name=profile["full_name"],
+            business_type=profile.get("objectives", {}).get("business_type", "producto"),  
+            stage=profile["stage"],
+            created_at=profile['created_at']
         )
+        
+        except Exception as e:
+            print(f"Error autenticando usuario: {e}")
+            return None
+
+
     
     def get_user_by_email(self, email: str) -> Optional[UserResponse]:
         """Obtener usuario por email"""
-        user = self._users.get(email)
-        if not user:
-            return None
-        
-        return UserResponse(
-            id=user["id"],
-            name=user["name"],
-            email=user["email"],
-            created_at=user["created_at"]
-        )
-    
-    def get_user_by_id(self, user_id: str) -> Optional[UserResponse]:
-        """Obtener usuario por ID"""
-        for user in self._users.values():
-            if user["id"] == user_id:
-                return UserResponse(
-                    id=user["id"],
-                    name=user["name"],
-                    email=user["email"],
-                    created_at=user["created_at"]
-                )
-        return None
-    
-    def update_user(self, user_id: str, user_update: UserUpdate) -> Optional[UserResponse]:
-        """Actualizar usuario"""
-        # Buscar usuario
-        user = None
-        old_email = None
-        for email, user_data in self._users.items():
-            if user_data["id"] == user_id:
-                user = user_data
-                old_email = email
-                break
-        
-        if not user:
-            return None
-        
-        # Actualizar campos
-        if user_update.name is not None:
-            user["name"] = user_update.name
-        
-        return UserResponse(
-            id=user["id"],
-            name=user["name"],
-            email=user["email"],
-            created_at=user["created_at"]
-        )
-    
-    def get_all_users(self) -> List[UserResponse]:
-        """Obtener todos los usuarios (para testing)"""
-        return [
-            UserResponse(
-                id=user["id"],
-                name=user["name"],
-                email=user["email"],
-                created_at=user["created_at"]
-            )
-            for user in self._users.values()
-        ]
+        try:
+            #Obtain user
+            user_result = self.db.table('users').select('*').eq('email', email).execute()
 
-    def delete_user(self, user_id:str) -> bool:
-        """"Eliminar usuario por ID"""
-        for email, user in list(self._users.items()):
-            if user["id"] == user_id:
-                del self._users[email]
-                return True
-        return False
+            if not user_result.data:
+                return None
+            
+            user = user_result.data[0]
+
+            #Obtain profile
+            profile_result = self.db.table('profiles').select('*').eq('id',user["id"]).execute()
+
+            if not profile_result.data:
+                return None
+            
+            profile = profile_result.data[0]
+
+            return UserResponse(
+            id=str(user["id"]),
+            email=user["email"],
+            full_name=profile["full_name"],
+            business_type=profile.get("objectives", {}).get("business_type", "producto"), 
+            stage=profile["stage"],
+            created_at=profile["created_at"]
+        )
+        except Exception as e:
+            print(f"Error getting user by email: {e}")
+            return None
+
 
 # Instancia global del servicio
 user_service = UserService()

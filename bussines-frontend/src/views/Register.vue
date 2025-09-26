@@ -75,7 +75,7 @@
             <n-input
               v-model:value="name"
               size="large"
-              placeholder="Nombre"
+              placeholder="Usuario"
               class="register-input"
             />
           </n-form-item>
@@ -84,7 +84,7 @@
             <n-input
               v-model:value="email"
               size="large"
-              placeholder="Usuario"
+              placeholder="Correo electrónico"
               class="register-input"
             />
           </n-form-item>
@@ -107,9 +107,10 @@
               block
               class="register-button"
               @click="handleRegister"
+              :loading="authStore.isLoading"
+              :disabled="authStore.isLoading"
             >
-              <!-- ✅ CORREGIDO: Texto correcto -->
-              Registrarse
+              {{ authStore.isLoading ? 'Creando cuenta...' : 'Registrarse' }}
             </n-button>
           </n-form-item>
 
@@ -152,6 +153,18 @@
               Continuar con Microsoft
             </n-button>
           </n-form-item>
+
+          <!-- ✅ AÑADIR: Mostrar errores del store -->
+          <n-form-item v-if="authStore.error">
+            <n-alert 
+              title="Error" 
+              type="error" 
+              :description="authStore.error"
+              show-icon
+              closable
+              @close="authStore.clearError"
+            />
+          </n-form-item>
         </n-form>
 
         <!-- Enlace a login -->
@@ -182,10 +195,16 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useMessage } from 'naive-ui' // ✅ Para mostrar notificaciones
+import { useAuthStore } from '../stores/auth' // ✅ Importar store
 import { LogoGoogle, CloseOutline } from '@vicons/ionicons5'
 import { h } from 'vue'
 
-// Icono de Microsoft (creamos uno simple)
+// ✅ AÑADIR: Store y message
+const authStore = useAuthStore()
+const message = useMessage()
+
+// Icono de Microsoft (mantener igual)
 const LogoMicrosoft = {
   render() {
     return h('svg', {
@@ -201,44 +220,73 @@ const LogoMicrosoft = {
 
 const router = useRouter()
 
-// Reactive data
+// Reactive data (mantener igual)
 const name = ref('')
 const email = ref('')
 const password = ref('')
 
-// Methods
-const handleRegister = () => {
+// ✅ ACTUALIZAR: Método de registro
+const handleRegister = async () => {
+  // Limpiar errores previos
+  authStore.clearError()
+  
+  // Validaciones básicas
   if (!name.value || !email.value || !password.value) {
-    console.error('Todos los campos son requeridos')
+    message.error('Todos los campos son requeridos')
     return
   }
   
   if (password.value.length < 6) {
-    console.error('La contraseña debe tener al menos 6 caracteres')
+    message.error('La contraseña debe tener al menos 6 caracteres')
+    return
+  }
+
+  // Validación de email básica
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email.value)) {
+    message.error('Por favor ingresa un email válido')
     return
   }
   
-  console.log('Register attempt:', { 
-    name: name.value, 
-    email: email.value, 
-    password: password.value 
-  })
-  // Aquí irá la lógica de registro
+  try {
+    // ✅ CONECTAR CON BACKEND
+    await authStore.register({
+      full_name: name.value,
+      email: email.value,
+      password: password.value
+    })
+    
+    // ✅ Registro exitoso
+    message.success('¡Cuenta creada exitosamente!')
+    
+    // Redirigir a la interfaz principal
+    router.push('/interfaz')
+    
+  } catch (error) {
+    // ✅ Manejar errores del backend
+    console.error('Error en registro:', error)
+    
+    // Mostrar mensaje de error específico
+    if (error.detail && error.detail.includes('ya está registrado')) {
+      message.error('Este email ya está registrado')
+    } else if (error.detail) {
+      message.error(error.detail)
+    } else {
+      message.error('Error al crear la cuenta. Inténtalo de nuevo.')
+    }
+  }
 }
 
+// Mantener igual los otros métodos
 const handleGoogleRegister = () => {
-  console.log('Google register')
-  // Aquí irá la lógica de Google OAuth
+  message.info('Próximamente disponible')
 }
 
 const handleMicrosoftRegister = () => {
-  console.log('Microsoft register')
-  // Aquí irá la lógica de Microsoft OAuth
+  message.info('Próximamente disponible')
 }
 
-// ✅ NUEVO: Función para redirigir al hacer click en las cards
 const redirectToAuth = () => {
-  // Puedes cambiarlo a '/login' si prefieres que vaya al login
   router.push('/register')
 }
 

@@ -15,11 +15,23 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
+    # Database
+    SUPABASE_URL: str
+    SUPABASE_ANON_KEY: str
+    SUPABASE_SERVICE_KEY: str
+
+    # OpenAI
+    #OPENAI_API_KEY: str = ""
+    OPENROUTER_API_KEY: str = ""
+
     # CORS
     FRONTEND_URL: str = "http://localhost:5173"
-    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:5173"]
+    BACKEND_CORS_ORIGINS: List[str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
+        ]
     
-    class Config:  # ⚠️ Cambié "config" por "Config" (mayúscula)
+    class Config:  
         env_file = ".env"
 
 settings = Settings()

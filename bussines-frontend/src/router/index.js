@@ -1,9 +1,9 @@
+import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 import Home from '../views/LandingPage.vue'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
-import Interfaz from  '../views/Interfaz.vue'
-
-
+import Interfaz from '../views/Interfaz.vue'
 
 const routes = [
     {
@@ -34,10 +34,6 @@ const routes = [
         }
     },
     {
-        path: '/:pathMatch(.*)*',
-        redirect: '/'
-    },
-    { 
         path: '/interfaz',
         name: 'Interfaz',
         component: Interfaz,
@@ -45,7 +41,41 @@ const routes = [
             title: 'Interfaz - AI Business Advisor',
             requiresAuth: true 
         }
+    },
+    {
+        path: '/:pathMatch(.*)*',
+        redirect: '/'
     }
 ]
 
-export default routes
+
+const router = createRouter({
+    history: createWebHistory(),
+    routes
+})
+
+// ✅ NAVIGATION GUARDS - PROTECCIÓN DE RUTAS
+router.beforeEach(async (to, from, next) => {
+    // Cambiar título de la página
+    if (to.meta.title) {
+        document.title = to.meta.title
+    }
+
+    // Verificar autenticación
+    const token = localStorage.getItem('token')
+    const requiresAuth = to.meta.requiresAuth
+
+    if (requiresAuth && !token) {
+        // Ruta protegida sin token - redirigir a login
+        console.log('🔒 Ruta protegida - Redirigiendo a login')
+        next('/login')
+    } else if ((to.name === 'Login' || to.name === 'Register') && token) {
+        // Ya autenticado - redirigir a interfaz
+        console.log('✅ Ya autenticado - Redirigiendo a interfaz')
+        next('/interfaz')
+    } else {
+        next()
+    }
+})
+
+export default router

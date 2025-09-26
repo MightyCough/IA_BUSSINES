@@ -1,63 +1,58 @@
 <template>
   <div class="login-page">
-    <!-- Video de fondo -->
-    <div class="video-section">
-      <!-- Opción 1: Video local -->
-      <video 
-        class="background-video"
-        autoplay 
-        muted 
-        loop
-        playsinline
-      >
-        <source src="/videos/business-hero.mp4" type="video/mp4">
-        <source src="/videos/business-hero.webm" type="video/webm">
-        Tu navegador no soporta videos HTML5.
-      </video>
-      
-      <!-- Overlay para mejor legibilidad -->
-      <div class="video-overlay"></div>
-      
-      <!-- Contenido sobre el video -->
-      <div class="video-content">
+    <!-- Lado izquierdo: Contenido hero -->
+    <div class="hero-side">
+      <div class="hero-container">
         <div class="hero-badge">
           IA especializada para emprendedores
         </div>
-        
+
         <h1 class="hero-title">
           Tu asesor de<br>
           Negocios <span class="highlight">inteligente</span>
         </h1>
-        
+
         <p class="hero-subtitle">
-          Desde la idea hasta la expansión. Recibe asesoría personalizada, 
-          planes de negocio guiados y estrategias de crecimiento adaptadas a tu emprendimiento.
+          Desde la idea hasta la expansión. Recibe asesoría personalizada, planes de negocio 
+          guiados y estrategias de crecimiento adaptadas a tu emprendimiento.
         </p>
-        
-        <!-- Características destacadas -->
-        <div class="features-list">
-          <div class="feature-item">
-            <div class="feature-icon">🚀</div>
-            <span>Acelera tu crecimiento</span>
+
+        <!-- Cards de proceso -->
+        <div class="process-cards">
+          <div class="process-card">
+            <div class="process-icon">🚀</div>
+            <div class="process-content">
+              <h3>Acelera tu crecimiento</h3>
+              <p>Estrategias personalizadas para cada etapa</p>
+            </div>
           </div>
-          <div class="feature-item">
-            <div class="feature-icon">💡</div>
-            <span>Ideas validadas por IA</span>
+          <div class="process-card">
+            <div class="process-icon">💡</div>
+            <div class="process-content">
+              <h3>Ideas validadas por IA</h3>
+              <p>Análisis de mercado en tiempo real</p>
+            </div>
           </div>
-          <div class="feature-item">
-            <div class="feature-icon">📊</div>
-            <span>Análisis de mercado instantáneo</span>
+          <div class="process-card">
+            <div class="process-icon">📊</div>
+            <div class="process-content">
+              <h3>Análisis de mercado instantáneo</h3>
+              <p>Datos y tendencias actualizadas</p>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Panel lateral de login -->
-    <div class="login-panel">
+    <!-- Lado derecho: Formulario de login -->
+    <div class="login-side">
       <div class="login-container">
-        <!-- Header del panel -->
-        <div class="panel-header">
-          <div class="logo">StarNow</div>
+        <!-- Header -->
+        <div class="login-header">
+          <div class="logo">
+            <span class="logo-text">StarNow</span>
+          </div>
+          
           <button class="close-button" @click="goBack">
             <n-icon size="24">
               <CloseOutline />
@@ -65,12 +60,10 @@
           </button>
         </div>
 
-        <!-- Formulario de login -->
+        <!-- Formulario -->
         <div class="login-form-container">
-          <div class="login-header">
-            <h2 class="login-title">Iniciar sesión</h2>
-            <p class="login-subtitle">Accede a tu asesor de negocios inteligente</p>
-          </div>
+          <h2 class="login-title">Iniciar sesión</h2>
+          <p class="login-subtitle">Accede a tu asesor de negocios inteligente</p>
 
           <n-form class="login-form">
             <n-form-item>
@@ -91,7 +84,6 @@
                 placeholder="Contraseña"
                 class="login-input"
                 show-password-on="click"
-                @keyup.enter="handleLogin"
               />
             </n-form-item>
 
@@ -102,9 +94,10 @@
                 block
                 class="login-button"
                 @click="handleLogin"
-                :loading="loading"
+                :loading="authStore.isLoading"
+                :disabled="authStore.isLoading"
               >
-                Acceder
+                {{ authStore.isLoading ? 'Iniciando sesión...' : 'Acceder' }}
               </n-button>
             </n-form-item>
 
@@ -115,11 +108,11 @@
               <div class="separator-line"></div>
             </div>
 
-            <!-- Botones de OAuth -->
+            <!-- Botones OAuth -->
             <div class="oauth-buttons">
               <n-button
                 size="large"
-                class="oauth-button google-button"
+                class="oauth-button"
                 @click="handleGoogleLogin"
               >
                 <template #icon>
@@ -132,7 +125,7 @@
 
               <n-button
                 size="large"
-                class="oauth-button microsoft-button"
+                class="oauth-button"
                 @click="handleMicrosoftLogin"
               >
                 <template #icon>
@@ -143,13 +136,25 @@
                 Microsoft
               </n-button>
             </div>
+
+            <!-- Mostrar errores del store -->
+            <n-form-item v-if="authStore.error">
+              <n-alert 
+                title="Error" 
+                type="error" 
+                :description="authStore.error"
+                show-icon
+                closable
+                @close="authStore.clearError"
+              />
+            </n-form-item>
           </n-form>
 
-          <!-- Enlace a registro -->
+          <!-- Footer del formulario -->
           <div class="login-footer">
-            <p>¿No tienes cuenta? 
+            <p>¿No tienes una cuenta? 
               <router-link to="/register" class="register-link">
-                Crear cuenta gratuita
+                Regístrate gratis
               </router-link>
             </p>
           </div>
@@ -162,8 +167,14 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useMessage } from 'naive-ui'
+import { useAuthStore } from '../stores/auth'
 import { LogoGoogle, CloseOutline } from '@vicons/ionicons5'
 import { h } from 'vue'
+
+const authStore = useAuthStore()
+const message = useMessage()
+const router = useRouter()
 
 // Icono de Microsoft
 const LogoMicrosoft = {
@@ -179,47 +190,53 @@ const LogoMicrosoft = {
   }
 }
 
-const router = useRouter()
-
 // Reactive data
 const email = ref('')
 const password = ref('')
-const loading = ref(false)
 
-// Methods
+// Métodos
 const handleLogin = async () => {
+  authStore.clearError()
+  
   if (!email.value || !password.value) {
-    console.error('Por favor completa todos los campos')
+    message.error('Todos los campos son requeridos')
     return
   }
 
-  loading.value = true
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email.value)) {
+    message.error('Por favor ingresa un email válido')
+    return
+  }
   
   try {
-    console.log('Login attempt:', { email: email.value, password: password.value })
+    await authStore.login({
+      email: email.value,
+      password: password.value
+    })
     
-    // Simular login exitoso
-    setTimeout(() => {
-      loading.value = false
-      router.push('/interfaz')
-    }, 1500)
+    message.success('¡Bienvenido de vuelta!')
+    router.push('/interfaz')
     
   } catch (error) {
-    loading.value = false
-    console.error('Error de login:', error)
+    console.error('Error en login:', error)
+    
+    if (error.detail && error.detail.includes('incorrectos')) {
+      message.error('Email o contraseña incorrectos')
+    } else if (error.detail) {
+      message.error(error.detail)
+    } else {
+      message.error('Error al iniciar sesión. Inténtalo de nuevo.')
+    }
   }
 }
 
 const handleGoogleLogin = () => {
-  console.log('Google login')
-  // Redirigir a interfaz después del login exitoso
-  router.push('/interfaz')
+  message.info('Próximamente disponible')
 }
 
 const handleMicrosoftLogin = () => {
-  console.log('Microsoft login')
-  // Redirigir a interfaz después del login exitoso
-  router.push('/interfaz')
+  message.info('Próximamente disponible')
 }
 
 const goBack = () => {
@@ -230,162 +247,130 @@ const goBack = () => {
 <style scoped>
 .login-page {
   min-height: 100vh;
-  display: flex;
-  background: #000;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: white;
 }
 
-/* Sección del video */
-.video-section {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
+/* Lado izquierdo: Hero */
+.hero-side {
+  background: linear-gradient(135deg, #a855f7 0%, #8b5cf6 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.background-video {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  min-width: 100%;
-  min-height: 100%;
-  width: auto;
-  height: auto;
-  transform: translate(-50%, -50%);
-  object-fit: cover;
-  z-index: 1;
-}
-
-.video-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    45deg, 
-    rgba(168, 85, 247, 0.7) 0%, 
-    rgba(139, 92, 246, 0.6) 50%,
-    rgba(168, 85, 247, 0.8) 100%
-  );
-  z-index: 2;
-}
-
-.video-content {
-  position: relative;
-  z-index: 3;
-  text-align: center;
+  padding: 60px 40px;
   color: white;
-  max-width: 600px;
-  padding: 0 40px;
+}
+
+.hero-container {
+  max-width: 500px;
+  text-align: center;
 }
 
 .hero-badge {
   display: inline-block;
   background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
   color: white;
-  padding: 10px 24px;
-  border-radius: 25px;
+  padding: 8px 20px;
+  border-radius: 20px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   margin-bottom: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
 }
 
 .hero-title {
-  font-size: 3.5rem;
-  font-weight: 800;
+  font-size: 3rem;
+  font-weight: 700;
   line-height: 1.1;
   margin: 0 0 24px 0;
   letter-spacing: -0.02em;
-  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .highlight {
-  background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-shadow: none;
+  color: #fbbf24;
 }
 
 .hero-subtitle {
-  font-size: 1.2rem;
-  line-height: 1.6;
-  margin: 0 0 48px 0;
-  opacity: 0.95;
+  font-size: 1.125rem;
+  line-height: 1.7;
+  opacity: 0.9;
+  margin: 0 0 60px 0;
   font-weight: 400;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
-.features-list {
+.process-cards {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  max-width: 400px;
-  margin: 0 auto;
+  gap: 20px;
 }
 
-.feature-item {
+.process-card {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   gap: 16px;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  padding: 16px 20px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  font-weight: 500;
+  text-align: left;
 }
 
-.feature-icon {
-  font-size: 24px;
-  width: 40px;
-  text-align: center;
+.process-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
 }
 
-/* Panel lateral de login */
-.login-panel {
-  width: 480px;
-  background: white;
+.process-content h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+}
+
+.process-content p {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  margin: 0;
+}
+
+/* Lado derecho: Login */
+.login-side {
   display: flex;
   flex-direction: column;
-  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
-  position: relative;
-  z-index: 10;
+  background: white;
 }
 
 .login-container {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  padding: 40px;
 }
 
-.panel-header {
+.login-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px 32px;
-  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 60px;
 }
 
-.logo {
-  font-size: 24px;
+.logo-text {
+  font-size: 1.5rem;
   font-weight: 700;
-  color: #a855f7;
-  letter-spacing: -0.01em;
+  background: linear-gradient(135deg, #a855f7 0%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .close-button {
   background: none;
   border: none;
   padding: 8px;
-  border-radius: 8px;
-  cursor: pointer;
+  border-radius: 50%;
   color: #666;
+  cursor: pointer;
   transition: background 0.2s;
 }
 
@@ -398,26 +383,24 @@ const goBack = () => {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 40px 32px;
-}
-
-.login-header {
-  text-align: center;
-  margin-bottom: 32px;
+  max-width: 400px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .login-title {
-  font-size: 28px;
+  font-size: 2rem;
   font-weight: 700;
   color: #1a1a1a;
   margin: 0 0 8px 0;
-  letter-spacing: -0.01em;
+  text-align: center;
 }
 
 .login-subtitle {
   color: #666;
-  margin: 0;
-  font-size: 15px;
+  text-align: center;
+  margin: 0 0 40px 0;
+  font-size: 1rem;
 }
 
 .login-form {
@@ -425,11 +408,8 @@ const goBack = () => {
 }
 
 .login-input {
-  --n-border-radius: 12px;
-  --n-height: 56px;
-  --n-font-size: 16px;
   --n-border: 1px solid #e2e8f0;
-  --n-border-focus: 2px solid #a855f7;
+  --n-border-focus: 1px solid #a855f7;
   --n-border-hover: 1px solid #a855f7;
   margin-bottom: 16px;
 }
@@ -437,24 +417,15 @@ const goBack = () => {
 .login-button {
   background: linear-gradient(135deg, #a855f7 0%, #8b5cf6 100%);
   border: none;
-  height: 56px;
-  font-size: 16px;
   font-weight: 600;
-  border-radius: 12px;
-  box-shadow: 0 4px 14px rgba(168, 85, 247, 0.3);
-  transition: all 0.3s ease;
-  margin-bottom: 24px;
-}
-
-.login-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4);
+  height: 48px;
+  font-size: 1rem;
 }
 
 .separator {
   display: flex;
   align-items: center;
-  margin: 24px 0;
+  margin: 32px 0;
 }
 
 .separator-line {
@@ -467,14 +438,13 @@ const goBack = () => {
   margin: 0 16px;
   color: #666;
   font-size: 14px;
-  font-weight: 500;
 }
 
 .oauth-buttons {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 32px;
 }
 
 .oauth-button {
@@ -483,37 +453,24 @@ const goBack = () => {
   color: #374151;
   font-weight: 500;
   height: 48px;
-  border-radius: 10px;
   transition: all 0.2s;
 }
 
 .oauth-button:hover {
-  border-color: #d1d5db;
-  background: #f9fafb;
-  transform: translateY(-1px);
-}
-
-.google-button:hover {
-  border-color: #4285f4;
-  background: rgba(66, 133, 244, 0.05);
-}
-
-.microsoft-button:hover {
-  border-color: #0078d4;
-  background: rgba(0, 120, 212, 0.05);
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.05);
 }
 
 .login-footer {
   text-align: center;
   margin-top: auto;
-  padding-top: 24px;
-  border-top: 1px solid #f0f0f0;
+  padding-top: 32px;
+  border-top: 1px solid #e2e8f0;
 }
 
 .login-footer p {
   color: #666;
   margin: 0;
-  font-size: 14px;
 }
 
 .register-link {
@@ -528,66 +485,44 @@ const goBack = () => {
 
 /* Responsive */
 @media (max-width: 1024px) {
-  .login-panel {
-    width: 420px;
+  .login-page {
+    grid-template-columns: 1fr;
   }
   
-  .login-form-container {
-    padding: 32px 24px;
+  .hero-side {
+    display: none;
   }
   
-  .hero-title {
-    font-size: 3rem;
+  .login-container {
+    padding: 40px 24px;
   }
 }
 
 @media (max-width: 768px) {
-  .login-page {
-    flex-direction: column;
-  }
-  
-  .video-section {
-    height: 40vh;
-    min-height: 300px;
-  }
-  
-  .login-panel {
-    width: 100%;
-    height: 60vh;
-  }
-  
-  .login-container {
-    height: auto;
-  }
-  
-  .video-content {
-    padding: 0 24px;
-  }
-  
   .hero-title {
     font-size: 2.5rem;
   }
   
-  .features-list {
-    display: none;
-  }
-}
-
-@media (max-width: 480px) {
-  .panel-header {
-    padding: 16px 20px;
+  .login-container {
+    padding: 32px 20px;
   }
   
-  .login-form-container {
-    padding: 24px 20px;
+  .login-title {
+    font-size: 1.75rem;
   }
   
   .oauth-buttons {
     grid-template-columns: 1fr;
   }
-  
+}
+
+@media (max-width: 480px) {
   .hero-title {
     font-size: 2rem;
+  }
+  
+  .login-header {
+    margin-bottom: 40px;
   }
 }
 </style>
