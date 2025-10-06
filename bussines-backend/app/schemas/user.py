@@ -11,9 +11,8 @@ class UserCreate(UserBase):
     password: str
     full_name: str
     business_type: Optional[str] = "producto"
-    stage: Optional [str] = "idea"
+    stage: Optional[str] = "idea"
 
-    
     @validator('password')
     def validate_password(cls, v):
         if len(v) < 6:
@@ -29,6 +28,7 @@ class UserCreate(UserBase):
     @validator('email')
     def remove_spaces_email(cls, v):
         return v.strip()
+
 
 class UserUpdate(UserBase):
     """Esquema para actualizar nombre"""
@@ -52,6 +52,7 @@ class UserResponse(UserBase):
     business_type: str
     stage: str
     created_at: Optional[datetime] = None
+    is_verified: Optional[bool] = False
 
     class Config:
         from_attributes = True
@@ -61,4 +62,29 @@ class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+class RegisterInitResponse(BaseModel):
+    """Respuesta al iniciar el registro (envío de código)"""
+    message: str
+    redirect_url: str
+    email: EmailStr
+
+class RegisterVerifyResponse(BaseModel):
+    """Respuesta al verificar el código (usuario creado y autenticado)"""
+    message: str
+    user: UserResponse
+    access_token: Optional[str] = None
+    token_type: Optional[str] = "bearer"
+
+
+class UserVerification(BaseModel):
+    email: EmailStr
+    verification_code:str
+
+    @validator("email")
+    def normalize_email(cls,v):
+        return v.strip().lower()
+
+class UserResendCode(BaseModel):
+    email: EmailStr
 

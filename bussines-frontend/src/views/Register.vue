@@ -227,46 +227,46 @@ const password = ref('')
 
 // ✅ ACTUALIZAR: Método de registro
 const handleRegister = async () => {
-  // Limpiar errores previos
   authStore.clearError()
-  
-  // Validaciones básicas
+
   if (!name.value || !email.value || !password.value) {
     message.error('Todos los campos son requeridos')
     return
   }
-  
+
   if (password.value.length < 6) {
     message.error('La contraseña debe tener al menos 6 caracteres')
     return
   }
 
-  // Validación de email básica
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(email.value)) {
     message.error('Por favor ingresa un email válido')
     return
   }
-  
+
   try {
-    // ✅ CONECTAR CON BACKEND
-    await authStore.register({
+    // 👇 Paso 1: pedir registro (NO crea en la BD)
+    await authStore.requestRegister({
       full_name: name.value,
       email: email.value,
       password: password.value
     })
-    
-    // ✅ Registro exitoso
-    message.success('¡Cuenta creada exitosamente!')
-    
-    // Redirigir a la interfaz principal
-    router.push('/interfaz')
+
+    // ✅ Guardar email en localStorage para la vista Verification
+    localStorage.setItem("pending_email", email.value)
+
+    message.success('Código enviado a tu correo, revisa tu bandeja 📩')
+
+    // ✅ Redirigir a la vista de verificación con query param
+    router.push({
+      path: '/register/verification',
+      query: { email: email.value }
+    })
     
   } catch (error) {
-    // ✅ Manejar errores del backend
     console.error('Error en registro:', error)
-    
-    // Mostrar mensaje de error específico
+
     if (error.detail && error.detail.includes('ya está registrado')) {
       message.error('Este email ya está registrado')
     } else if (error.detail) {

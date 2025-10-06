@@ -4,12 +4,14 @@ import Home from '../views/LandingPage.vue'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
 import Interfaz from '../views/Interfaz.vue'
+import Verification from '../views/Verification.vue'
+import LandingPage from '../views/LandingPage.vue'
 
 const routes = [
     {
         path: '/',
-        name: 'Home',
-        component: Home,
+        name: 'LandingPage',
+        component: LandingPage,
         meta: {
             title: 'AI Business Advisor - Tu mentor empresarial',
             requiresAuth: false
@@ -40,6 +42,15 @@ const routes = [
         meta: { 
             title: 'Interfaz - AI Business Advisor',
             requiresAuth: true 
+        }
+    },
+    {
+        path: '/register/verification',
+        name: 'EmailVerification',
+        component: Verification,
+        meta: {
+            title: 'Verificación de Email',
+            requiresAuth: false
         }
     },
     {

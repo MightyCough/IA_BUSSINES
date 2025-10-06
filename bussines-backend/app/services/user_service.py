@@ -3,7 +3,8 @@ from datetime import datetime
 from app.schemas.user import UserCreate, UserResponse, UserUpdate,UserLogin
 from app.core.security import get_password_hash, verify_password
 from app.core.database import supabase_db
-
+from app.services.email_service import email_service
+import asyncio
 class UserService:    
     def __init__(self):
         self.db = supabase_db.get_client()
@@ -22,7 +23,8 @@ class UserService:
             #Creat a new user
             new_user={
                 "email":user_data.email,
-                "password_hash":get_password_hash(user_data.password)
+                "password_hash":get_password_hash(user_data.password),
+                "is_verified": False
             }
 
             user_result = self.db.table('users').insert(new_user).execute()
@@ -48,6 +50,11 @@ class UserService:
             profile_result = self.db.table('profiles').insert(profile_data).execute()
             print(f"Perfil creado {profile_result.data}")
 
+            try:
+                asyncio.create_task(email_service.send_verification_email(user_data.email, user_data.full_name))
+            except Exception as e:
+                print(f"Error enviando email de verificacion: {e}")
+
             if profile_result.data:
                 profile = profile_result.data[0]
                 return UserResponse(
@@ -56,7 +63,8 @@ class UserService:
                     full_name=profile["full_name"],
                     business_type=profile.get("objectives", {}).get("business_type", "producto"),
                     stage=profile["stage"],
-                    created_at=profile['created_at']
+                    created_at=profile['created_at'],
+                    is_verified = False
             )
             return None
     
@@ -89,6 +97,11 @@ class UserService:
             if not password_valid:
                 print("Contrasena incorrecta")
                 return None
+            
+            #Verify if user is verified
+            if not user.get("is_verified",False):
+                print("Usuario no verificado")
+                return None
 
             #Obtain profile
             profile_result = self.db.table('profiles').select('*').eq('id',user["id"]).execute()
@@ -107,7 +120,8 @@ class UserService:
             full_name=profile["full_name"],
             business_type=profile.get("objectives", {}).get("business_type", "producto"),  
             stage=profile["stage"],
-            created_at=profile['created_at']
+            created_at=profile['created_at'],
+            is_verified= user.get("is_verified",False)
         )
         
         except Exception as e:
@@ -141,11 +155,24 @@ class UserService:
             full_name=profile["full_name"],
             business_type=profile.get("objectives", {}).get("business_type", "producto"), 
             stage=profile["stage"],
-            created_at=profile["created_at"]
+            created_at=profile["created_at"],
+            is_verified=user.get("is_verified",False)
         )
         except Exception as e:
             print(f"Error getting user by email: {e}")
             return None
+    def set_user_verified(self,email:str)->bool:
+        """"Marcar usuario como verificado"""
+        try:
+            result = self.db.table('users').update({"is_verified":True}).eq('email',email).execute()
+            print(f"Usuario marcado como verificado: {email}")
+            return bool(result.data)
+        except Exception as e:
+            print(f"Error marcando usuario como verificado: {e}")
+            return False
+        
+    async def resend_verification_email(self,email:str,full_name:str):
+        await email_service.send_verification_email(email,full_name)
 
 
 # Instancia global del servicio

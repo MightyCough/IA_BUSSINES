@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from typing import List
+from pydantic import validator
 
 class Settings(BaseSettings):
     """Configuration settings 
@@ -24,6 +25,15 @@ class Settings(BaseSettings):
     #OPENAI_API_KEY: str = ""
     OPENROUTER_API_KEY: str = ""
 
+    #Configuracion SMTP
+    MAIL_USERNAME:str
+    MAIL_PASSWORD:str
+    MAIL_FROM:str
+    MAIL_SERVER:str
+    MAIL_PORT:int
+    MAIL_STARTTLS:bool
+    MAIL_SSL:bool
+
     # CORS
     FRONTEND_URL: str = "http://localhost:5173"
     BACKEND_CORS_ORIGINS: List[str] = [
@@ -31,7 +41,20 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173"
         ]
     
-    class Config:  
+    # Validadores para convertir tipos
+    @validator("MAIL_STARTTLS", "MAIL_SSL", pre=True)
+    def parse_booleans(cls, value):
+        if isinstance(value, str):
+            return value.lower() in ("true", "1", "yes")
+        return bool(value)
+
+    @validator("MAIL_PORT", pre=True)
+    def parse_port(cls, value):
+        if isinstance(value, str):
+            return int(value)
+        return value
+
+    class Config:
         env_file = ".env"
 
 settings = Settings()

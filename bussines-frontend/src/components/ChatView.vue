@@ -1,199 +1,147 @@
 <template>
-    <div class="chat-view">
-      <div class="chat-header">
-        <h1>Historial de chats</h1>
-        <n-button type="primary" @click="newChat">
-          + Nueva conversación
-        </n-button>
-      </div>
-  
-      <div class="chat-search">
-        <n-input
-          v-model:value="searchQuery"
-          placeholder="Buscar en chats..."
-          clearable
-        >
-          <template #prefix>
-            <n-icon><SearchOutline /></n-icon>
-          </template>
-        </n-input>
-      </div>
-  
-      <div class="chat-list">
-        <div class="chat-stats">
-          <span>{{ chatCount }} chats con StarNow</span>
-          <n-button text type="primary">Seleccionar</n-button>
-        </div>
-  
-        <div class="chat-items">
-          <div 
-            v-for="chat in filteredChats" 
-            :key="chat.id" 
-            class="chat-item"
-            @click="openChat(chat.id)"
-          >
-            <div class="chat-item-content">
-              <div class="chat-title">{{ chat.title }}</div>
-              <div class="chat-preview">{{ chat.preview }}</div>
-            </div>
-            <div class="chat-meta">
-              <span class="chat-date">{{ chat.date }}</span>
-              <n-button circle text type="primary">
-                <template #icon>
-                  <n-icon><EllipsisHorizontal /></n-icon>
-                </template>
-              </n-button>
-            </div>
-          </div>
+  <div class="chat-container">
+    <!-- Historial de conversación -->
+    <div class="chat-messages">
+      <div 
+        v-for="(msg, index) in conversation" 
+        :key="index" 
+        :class="['chat-message', msg.role]"
+      >
+        <div class="message-bubble">
+          <strong v-if="msg.role === 'user'">Tú:</strong>
+          <strong v-else>IA:</strong>
+          <p>{{ msg.content }}</p>
         </div>
       </div>
     </div>
-  </template>
-  
-  <script setup>
-  import { ref, computed } from 'vue'
-  import { SearchOutline, EllipsisHorizontal } from '@vicons/ionicons5'
-  import { useRouter } from 'vue-router'
-  
-  const router = useRouter()
-  const searchQuery = ref('')
-  
-  // Datos de ejemplo
-  const chats = ref([
-    {
-      id: 1,
-      title: 'Plan de negocio para startup',
-      preview: 'Análisis de mercado y estrategias de crecimiento...',
-      date: 'Hace 2 días'
-    },
-    {
-      id: 2,
-      title: 'Estrategia de marketing digital',
-      preview: 'Desarrollo de campaña en redes sociales...',
-      date: 'Hace 3 días'
-    },
-    {
-      id: 3,
-      title: 'Análisis financiero',
-      preview: 'Proyecciones financieras y flujo de caja...',
-      date: 'Hace 1 semana'
-    }
-  ])
-  
-  const chatCount = computed(() => chats.value.length)
-  
-  const filteredChats = computed(() => {
-    const query = searchQuery.value.toLowerCase()
-    return query
-      ? chats.value.filter(chat => 
-          chat.title.toLowerCase().includes(query) || 
-          chat.preview.toLowerCase().includes(query)
-        )
-      : chats.value
+
+    <!-- Input de mensaje -->
+    <div class="chat-input">
+      <n-input
+        v-model:value="userMessage"
+        type="textarea"
+        placeholder="Escribe tu mensaje..."
+        @keyup.enter.exact.prevent="sendMessage"
+        :disabled="loading"
+      />
+      <n-button 
+        type="primary" 
+        @click="sendMessage" 
+        :loading="loading"
+      >
+        Enviar
+      </n-button>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref } from "vue"
+import { chatService } from "../services/chatService"
+
+const userMessage = ref("")
+const conversation = ref([]) // historial de mensajes
+const loading = ref(false)
+
+const sendMessage = async () => {
+  if (!userMessage.value.trim()) return
+
+  // 👉 agregar mensaje del usuario
+  conversation.value.push({
+    role: "user",
+    content: userMessage.value
   })
-  
-  const newChat = () => {
-    router.push('/nueva-conversacion')
-  }
-  
-  const openChat = (chatId) => {
-    router.push(`/chat/${chatId}`)
-  }
-  </script>
-  
-  <style scoped>
-  .chat-view {
-    width: 100%;
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 24px;
-  }
-  
-  .chat-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-  }
-  
-  .chat-header h1 {
-    font-size: 24px;
-    font-weight: 600;
-    color: #333;
-  }
-  
-  .chat-search {
-    margin-bottom: 24px;
-  }
-  
-  .chat-stats {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    color: #666;
-    font-size: 14px;
-    margin-bottom: 16px;
-  }
-  
-  .chat-items {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .chat-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 16px;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-  
-  .chat-item:hover {
-    background-color: #f9f9f9;
-    border-color: #ddd;
-  }
-  
-  .chat-item-content {
-    flex: 1;
-  }
-  
-  .chat-title {
-    font-size: 16px;
-    font-weight: 500;
-    color: #333;
-    margin-bottom: 4px;
-  }
-  
-  .chat-preview {
-    font-size: 14px;
-    color: #666;
-  }
-  
-  .chat-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  
-  .chat-date {
-    font-size: 13px;
-    color: #666;
-  }
-  
-  @media (max-width: 640px) {
-    .chat-view {
-      padding: 16px;
+
+  const currentMessage = userMessage.value
+  userMessage.value = ""
+  loading.value = true
+
+  try {
+    const response = await chatService.sendMessage(
+      currentMessage,
+      conversation.value // historial actual
+    )
+
+    if (response.success) {
+      conversation.value.push({
+        role: "assistant",
+        content: response.data.response
+      })
+    } else {
+      conversation.value.push({
+        role: "assistant",
+        content: `⚠️ Error: ${response.error}`
+      })
     }
-  
-    .chat-header h1 {
-      font-size: 20px;
-    }
-  
-    .chat-preview {
-      display: none;
-    }
+  } catch (e) {
+    console.error("❌ Error en chat:", e)
+    conversation.value.push({
+      role: "assistant",
+      content: "⚠️ Error inesperado al contactar con la IA."
+    })
+  } finally {
+    loading.value = false
   }
-  </style>
+}
+</script>
+
+<style scoped>
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 80vh;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 16px;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  margin-bottom: 16px;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.chat-message {
+  margin-bottom: 12px;
+  display: flex;
+}
+
+.chat-message.user {
+  justify-content: flex-end;
+}
+
+.chat-message.assistant {
+  justify-content: flex-start;
+}
+
+.message-bubble {
+  max-width: 70%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.chat-message.user .message-bubble {
+  background: #a855f7;
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-message.assistant .message-bubble {
+  background: #e6e6e6;
+  color: #333;
+  border-bottom-left-radius: 4px;
+}
+
+.chat-input {
+  display: flex;
+  gap: 8px;
+}
+</style>

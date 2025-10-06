@@ -15,10 +15,61 @@ class AIService:
         print(f"API Key configurada: {bool(self.openrouter_api_key)}")
         if self.openrouter_api_key:
             print(f"API Key length: {len(self.openrouter_api_key)}")
-            print(f"API Key preview: {self.openrouter_api_key[:15]}...{self.openrouter_api_key[-5]}")
+            print(f"API Key preview: {self.openrouter_api_key[:15]}...{self.openrouter_api_key[-5:]}")
+    
+    # ✅ CORREGIR INDENTACIÓN - SACAR FUNCIÓN DEL __init__
+    async def generate_response(self, user_message: str, conversation_history: List[Dict] = None) -> str:
+        """Generar respuesta de IA basada en el mensaje del historial"""
+        try:
+            messages = []
 
+            messages.append({
+                "role": "system",
+                "content": "Eres un asistente de IA especializado en negocios y emprendimiento. Ayuda a los usuarios con consejos, estrategias y analisis de negocio."
+            })
 
-        
+            # agregar historial de conversacion (ultimos 10 mensajes)
+            if conversation_history:
+                recent_history = conversation_history[-10:]  # solo los ultimos 10
+                for msg in recent_history:
+                    messages.append({
+                        "role": msg["role"],
+                        "content": msg["content"]  # ✅ CORREGIR: era user_message, debe ser msg["content"]
+                    })
+            
+            # agregar mensaje actual del usuario
+            messages.append({
+                "role": "user",
+                "content": user_message
+            })
+
+            # llamada a la API de OpenRouter
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    self.openrouter_url,  # ✅ CORREGIR URL
+                    headers={
+                        "Authorization": f"Bearer {self.openrouter_api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "meta-llama/llama-3.1-8b-instruct:free",
+                        "messages": messages,
+                        "temperature": 0.7,
+                        "max_tokens": 1000
+                    }
+                )
+            
+                if response.status_code == 200:
+                    result = response.json()
+                    return result["choices"][0]["message"]["content"]
+                else:
+                    print(f"Error OpenRouter: {response.status_code} - {response.text}")
+                    return "Lo siento, hubo un error al procesar tu solicitud. Por favor, intenta de nuevo."
+                
+        except Exception as e:
+            print(f"Error en AI Service: {e}")
+            return "Lo siento, no pude procesar tu solicitud en este momento."
+
     async def generate_business_response(
         self, 
         user_message: str, 

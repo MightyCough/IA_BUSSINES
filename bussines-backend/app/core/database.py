@@ -17,3 +17,4 @@ class SupabaseConnection:
 
 # Instancia
 supabase_db = SupabaseConnection()
+supabase = supabase_db.get_client()

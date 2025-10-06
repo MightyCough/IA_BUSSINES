@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.api.routes import auth,chat
+from app.api.routes import auth, chat
 
 # Crear aplicación FastAPI
 app = FastAPI(
@@ -32,7 +32,11 @@ app.include_router(
     prefix=f"{settings.API_V1_STR}/auth", 
     tags=["Authentication"]
 )
-app.include_router(chat.router,prefix="/api/v1/chat",tags=["chat"])
+app.include_router(
+    chat.router, 
+    prefix=f"{settings.API_V1_STR}/chat",  
+    tags=["chat"]
+)
 
 @app.get("/")
 async def root():
@@ -59,4 +63,4 @@ async def startup_event():
 
 if __name__ == "__main__":
     import uvicorn 
-    uvicorn.run(app,host="0.0.0.0",port=8000,reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

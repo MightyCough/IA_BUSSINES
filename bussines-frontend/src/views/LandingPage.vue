@@ -296,6 +296,7 @@
 import Navbar from '../components/Navbar.vue' // Importar el componente
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { NTag, NCard, NIcon, NButton } from 'naive-ui'
 import { 
   BulbOutline, 
   ConstructOutline, 

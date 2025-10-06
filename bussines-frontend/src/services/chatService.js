@@ -34,6 +34,93 @@ class ChatService{
             }
         }
     }
+    /**
+   * 🔥 NUEVOS MÉTODOS PARA HISTORIAL
+   */
+  
+  // Conversaciones
+  async getConversations() {
+    try {
+      const response = await chatAPI.getConversations()
+      return {
+        success: true,
+        data: response.data
+      }
+    } catch (error) {
+      console.error('Error obteniendo conversaciones:', error)
+      return {
+        success: false,
+        error: error.response?.data?.detail || 'Error obteniendo conversaciones'
+      }
+    }
+  }
+
+  async createConversation(title = 'Nueva conversación') {
+    try {
+      const response = await chatAPI.createConversation({ title })
+      return {
+        success: true,
+        data: response.data
+      }
+    } catch (error) {
+      console.error('Error creando conversación:', error)
+      return {
+        success: false,
+        error: error.response?.data?.detail || 'Error creando conversación'
+      }
+    }
+  }
+
+  async deleteConversation(conversationId) {
+    try {
+      const response = await chatAPI.deleteConversation(conversationId)
+      return {
+        success: true,
+        data: response.data
+      }
+    } catch (error) {
+      console.error('Error eliminando conversación:', error)
+      return {
+        success: false,
+        error: error.response?.data?.detail || 'Error eliminando conversación'
+      }
+    }
+  }
+
+  // Mensajes
+  async getMessages(conversationId) {
+    try {
+      const response = await chatAPI.getMessages(conversationId)
+      return {
+        success: true,
+        data: response.data
+      }
+    } catch (error) {
+      console.error('Error obteniendo mensajes:', error)
+      return {
+        success: false,
+        error: error.response?.data?.detail || 'Error obteniendo mensajes'
+      }
+    }
+  }
+
+  async sendMessageToConversation(conversationId, content) {
+    try {
+      const response = await chatAPI.sendMessageToConversation(conversationId, { content })
+      return {
+        success: true,
+        data: response.data
+      }
+    } catch (error) {
+      console.error('Error enviando mensaje a conversación:', error)
+      return {
+        success: false,
+        error: error.response?.data?.detail || 'Error enviando mensaje'
+      }
+    }
+  }
+
+
 
     /**
      * Probar conexion con la IA

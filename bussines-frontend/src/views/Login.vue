@@ -196,37 +196,31 @@ const password = ref('')
 
 // Métodos
 const handleLogin = async () => {
-  authStore.clearError()
-  
-  if (!email.value || !password.value) {
-    message.error('Todos los campos son requeridos')
-    return
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!emailRegex.test(email.value)) {
-    message.error('Por favor ingresa un email válido')
-    return
-  }
-  
   try {
-    await authStore.login({
+    console.log('=== INICIANDO LOGIN DEBUG ===')
+    console.log('Email:', email.value)
+    console.log('Password length:', password.value?.length)
+    
+    authStore.clearError()
+    
+    const response = await authStore.login({
       email: email.value,
       password: password.value
     })
     
-    message.success('¡Bienvenido de vuelta!')
-    router.push('/interfaz')
+    console.log('=== RESPUESTA FINAL ===', response)
     
+    if (response.success) {
+      message.success('Login exitoso')
+      router.push('/interfaz')
+    }
   } catch (error) {
-    console.error('Error en login:', error)
+    console.error('=== ERROR EN LOGIN ===', error)
     
-    if (error.detail && error.detail.includes('incorrectos')) {
-      message.error('Email o contraseña incorrectos')
-    } else if (error.detail) {
-      message.error(error.detail)
+    if (authStore.error) {
+      message.error(authStore.error)
     } else {
-      message.error('Error al iniciar sesión. Inténtalo de nuevo.')
+      message.error('Error al iniciar sesión')
     }
   }
 }
